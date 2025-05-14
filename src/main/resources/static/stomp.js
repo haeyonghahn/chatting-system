@@ -1,18 +1,11 @@
 const stompClient = new StompJs.Client({
-  brokerURL: 'ws://localhost:8080/stomp/chats'
+  brokerURL: 'ws://localhost:8081/stomp/chats'
 });
 
 stompClient.onConnect = (frame) => {
   setConnected(true);
-  console.log('Connected: ' + frame);
-  stompClient.subscribe('/sub/chats', (chatMessage) => {
-    showMessage(JSON.parse(chatMessage.body));
-  });
-  stompClient.publish({
-    destination: "/pub/chats",
-    body: JSON.stringify(
-        {'message': "connected"})
-  })
+  showChatrooms();
+  console.log(frame);
 };
 
 stompClient.onWebSocketError = (error) => {
@@ -27,7 +20,7 @@ stompClient.onStompError = (frame) => {
 function setConnected(connected) {
   $("#connect").prop("disabled", connected);
   $("#disconnect").prop("disabled", !connected);
-  $("#create").prop("disabled", connected);
+  $("#create").prop("disabled", !connected);
 }
 
 function connect() {
@@ -43,7 +36,7 @@ function disconnect() {
 function sendMessage() {
     let chatroomId = $("#chatroom-id").val();
     stompClient.publish({
-        destination: "/pub/chats" + chatroomId,
+        destination: "/pub/chats/" + chatroomId,
         body: JSON.stringify(
             {'message': $("#message").val()})
     });
@@ -93,9 +86,9 @@ function renderChatrooms(chatrooms) {
     $("#chatroom-list").html("");
     for (let i = 0; i < chatrooms.length; i++) {
         $("#chatroom-list").append(
-            "<tr onclick='joinChatroom(" + chatroom[i].id + ")'><td>"
+            "<tr onclick='joinChatroom(" + chatrooms[i].id + ")'><td>"
             + chatrooms[i].id + "</td><td>" + chatrooms[i].title + "</td><td>"
-            + chatrooms[i].memberCount + "</td><td>" + chatrooms[i].createdAt
+            + chatrooms[i].memberCount + "</td><td>" + chatrooms[i].createAt
             + "</td></tr>"
         );
     }
@@ -105,32 +98,52 @@ let subscription;
 
 function enterChatrooms(chatroomId, newMember) {
     $("#chatroom-id").val(chatroomId);
+    $("#messages").html("");
+    showMessages(chatroomId);
     $("#conversation").show();
     $("#send").prop("disabled", false);
     $("#leave").prop("disabled", false);
 
-    if (!subscription) {
+    if (subscription) {
         subscription.unsubscribe();
     }
 
-    stompClient.subscribe('/sub/chats' + chatroomId, (chatMessage) => {
+    subscription = stompClient.subscribe('/sub/chats/' + chatroomId, (chatMessage) => {
         showMessage(JSON.parse(chatMessage.body));
     });
 
     if (newMember) {
         stompClient.publish({
-            destination: "/pub/chats" + chatroomId,
+            destination: "/pub/chats/" + chatroomId,
             body: JSON.stringify(
                 {'message': "님이 방에 들어왔습니다."})
         })
     }
 }
 
+function showMessages(chatroomId) {
+    $.ajax({
+        type: 'GET',
+        dataType: 'json',
+        url: '/chats/' + chatroomId + '/messages',
+        success: function (data) {
+            console.log('data: ', data);
+            for (let i = 0; i < data.length; i++) {
+                showMessage(data[i]);
+            }
+        },
+        error: function (request, status, error) {
+            console.log('request: ', request);
+            console.log('error: ', error);
+        },
+    })
+}
+
 function joinChatroom(chatroomId) {
     $.ajax({
         type: 'POST',
         dataType: 'json',
-        url: '/chats' + chatroomId,
+        url: '/chats/' + chatroomId,
         success: function (data) {
             console.log('data: ', data);
             enterChatrooms(chatroomId, data);
@@ -147,7 +160,7 @@ function leaveChatroom() {
     $.ajax({
         type: 'DELETE',
         dataType: 'json',
-        url: '/chats' + chatroomId,
+        url: '/chats/' + chatroomId,
         success: function (data) {
             console.log('data: ', data);
             showChatrooms();
