@@ -2,14 +2,17 @@ package org.fastcampus.services;
 
 import org.fastcampus.entities.Member;
 import org.fastcampus.enums.Gender;
+import org.fastcampus.enums.Role;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 public class MemberFactory {
 
-    public static Member member(OAuth2UserRequest userRequest, OAuth2User oAuth2User) {
+    public static Member create(OAuth2UserRequest userRequest, OAuth2User oAuth2User) {
         return switch (userRequest.getClientRegistration().getRegistrationId()) {
             case "kakao" -> {
                 Map<String, Object> attributeMap = oAuth2User.getAttribute("kakao_account");
@@ -20,11 +23,25 @@ public class MemberFactory {
                         .phoneNumber((String) attributeMap.get("phone_number"))
                         .gender(Gender.valueOf(((String) attributeMap.get("gender")).toUpperCase()))
                         .birthDay(getBirthDay(attributeMap))
-                        .role("USER_ROLE")
+                        .role(Role.USER.getCode())
                         .build();
             }
-            case "google" -> {}
+            case "google" -> {
+                Map<String, Object> attributeMap = oAuth2User.getAttributes();
+                yield Member.builder()
+                        .email((String) attributeMap.get("email"))
+                        .nickname((String) attributeMap.get("given_name"))
+                        .name((String) attributeMap.get("name"))
+                        .role(Role.USER.getCode())
+                        .build();
+            }
             default -> throw new IllegalArgumentException("연동되지 않은 서비스입니다.");
-        }
+        };
+    }
+
+    private static LocalDate getBirthDay(Map<String, Object> attributeMap) {
+        String birthYear = (String) attributeMap.get("birthyear");
+        String birthDay = (String) attributeMap.get("birthday");
+        return LocalDate.parse(birthYear + birthDay, DateTimeFormatter.BASIC_ISO_DATE);
     }
 }
