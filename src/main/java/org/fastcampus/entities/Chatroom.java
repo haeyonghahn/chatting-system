@@ -1,10 +1,7 @@
 package org.fastcampus.entities;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -24,6 +21,9 @@ public class Chatroom {
     private String title;
     @OneToMany(mappedBy = "chatroom")
     private Set<MemberChatroomMapping> memberChatroomMappingSet;
+    @Setter
+    @Transient
+    private Boolean hasNewMessage;
     private LocalDateTime createdAt;
 
     public MemberChatroomMapping addMember(Member member) {

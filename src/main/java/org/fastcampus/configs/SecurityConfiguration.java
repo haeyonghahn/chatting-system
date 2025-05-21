@@ -33,7 +33,7 @@ public class SecurityConfiguration {
                 .securityMatcher("/consultants/**")
                 .authorizeHttpRequests(request -> request
                         .requestMatchers(HttpMethod.POST, "/consultants").permitAll()
-                        .anyRequest().hasRole("ROLE_CONSULTANT"))
+                        .anyRequest().hasRole("CONSULTANT"))
                 .formLogin(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable);
 

@@ -10,10 +10,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
+@Getter
 @AllArgsConstructor
 public class CustomUserDetail implements UserDetails {
 
-    @Getter
     private Member member;
 
     @Override
